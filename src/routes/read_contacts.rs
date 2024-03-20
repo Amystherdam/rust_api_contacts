@@ -1,0 +1,1 @@
+pub async fn read_contacts() {}
