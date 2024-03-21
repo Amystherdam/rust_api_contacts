@@ -2,7 +2,7 @@
 
 ## _CRUD in Rust lang_
 
-![alt text for screen readers](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white).
+![alt text for screen readers](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
 
 ### CLI Commands
 

@@ -1626,6 +1626,7 @@ dependencies = [
  "dotenvy",
  "dotenvy_macro",
  "hyper 1.2.0",
+ "regex",
  "sea-orm",
  "serde",
  "serde_json",

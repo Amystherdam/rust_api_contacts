@@ -11,6 +11,7 @@ pub struct ResponseContact {
   pub name: String,
   pub email: String,
   pub phone: String,
+  pub created_at: Option<chrono::NaiveDateTime>,
   pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
@@ -45,6 +46,7 @@ pub async fn read_contacts(
           name: contact.name.clone(),
           email: contact.email.clone(),
           phone: contact.phone.clone(),
+          created_at: contact.created_at.clone(),
           updated_at: contact.updated_at.clone(),
       })
       .collect();
