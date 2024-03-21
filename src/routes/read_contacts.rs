@@ -11,6 +11,7 @@ pub struct ResponseContact {
   pub name: String,
   pub email: String,
   pub phone: String,
+  pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(Deserialize)]
@@ -44,6 +45,7 @@ pub async fn read_contacts(
           name: contact.name.clone(),
           email: contact.email.clone(),
           phone: contact.phone.clone(),
+          updated_at: contact.updated_at.clone(),
       })
       .collect();
 

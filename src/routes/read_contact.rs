@@ -15,6 +15,7 @@ pub struct ResponseContact {
   pub name: String,
   pub email: String,
   pub phone: String,
+  pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
 pub async fn read_contact(
@@ -29,6 +30,7 @@ pub async fn read_contact(
       name: contact.name,
       email: contact.email,
       phone: contact.phone,
+      updated_at: contact.updated_at,
     }))
   } else {
     Err((StatusCode::NOT_FOUND, Json(serde_json::json!({
