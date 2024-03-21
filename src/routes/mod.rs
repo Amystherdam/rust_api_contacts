@@ -5,11 +5,11 @@ use axum::{
 };
 use sea_orm::DatabaseConnection;
 
-mod read_contact;
-mod read_contacts;
-mod create_contact;
-mod update_contact;
-mod delete_contact;
+pub mod read_contact;
+pub mod read_contacts;
+pub mod create_contact;
+pub mod update_contact;
+pub mod delete_contact;
 
 use read_contact::read_contact;
 use read_contacts::read_contacts;

@@ -6,7 +6,7 @@ pub async fn delete_contact(
   Path(id): Path<i32>,
   Extension(database): Extension<DatabaseConnection>
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, Json<serde_json::Value>)> {
-  let mut contact_name: String = "Unknown".to_string();
+  let contact_name: String;
 
   let contact = 
     if let Some(contact) = Contacts::find_by_id(id)
