@@ -23,22 +23,22 @@ pub async fn read_contact(
   Path(id): Path<i32>, 
   Extension(database): Extension<DatabaseConnection>
 ) -> impl IntoResponse {
-  let contact = Contacts::find_by_id(id).one(&database).await.unwrap();
-
-  if let Some(contact) = contact {
-    Ok(Json(ResponseContact {
-      id: contact.id,
-      name: contact.name,
-      email: contact.email,
-      phone: contact.phone,
-      created_at: contact.created_at,
-      updated_at: contact.updated_at,
-    }))
-  } else {
-    Err((StatusCode::NOT_FOUND, Json(serde_json::json!({
-      "errors": {
-        "id": format!("Contact with id {} not found", id)
-      }
-    }))))
+  match Contacts::find_by_id(id).one(&database).await.unwrap() {
+    Some(contact) => {
+      Ok(Json(ResponseContact {
+        id: contact.id,
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone,
+        created_at: contact.created_at,
+        updated_at: contact.updated_at,
+      }))
+    },
+    None => {
+      Err((
+        StatusCode::NOT_FOUND, 
+        Json(serde_json::json!({ "errors": { "id": format!("Contact with id {} not found", id) } }))
+      ))
+    }
   }
 }

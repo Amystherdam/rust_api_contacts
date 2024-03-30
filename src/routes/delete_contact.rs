@@ -8,38 +8,44 @@ pub async fn delete_contact(
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, Json<serde_json::Value>)> {
   let contact_name: String;
 
-  let contact = 
-    if let Some(contact) = Contacts::find_by_id(id)
-      .one(&database) 
-      .await
-      .map_err(|e| {
-        eprintln!("Failed to fetch contact: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, 
-          Json(serde_json::json!({ "error": "Failed to fetch contact" }))
-        )
-      })? 
-    { 
-        contact_name = contact.name.clone();
-        contact.into_active_model()
-    } else {
-      return  Err((StatusCode::NOT_FOUND,
-        Json(serde_json::json!({ "error": format!("Contact with id {} not found", id)
-      }))))
-    };
+  match Contacts::find_by_id(id)
+    .one(&database)
+    .await
+  {
+    Ok(Some(contact)) => {
+      contact_name = contact.name.clone();
+      let contact = contact.into_active_model();
 
-    Contacts::delete(contact).exec(&database).await.map_err(|e| {
-      eprintln!("Failed to delete contact: {}", e);
-      return (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(serde_json::json!({ "error": "Failed to delete contact" }))
-      )
-    })?;
-
-    Ok((StatusCode::OK,
-      Json(serde_json::json!({ "message": {
-      "id": format!("Contact {} with id {} deleted", contact_name, id)
+      match Contacts::delete(contact)
+        .exec(&database)
+        .await
+      {
+        Ok(_) => {
+          Ok((StatusCode::OK,
+            Json(serde_json::json!(
+              { "message": { "id": format!("Contact {} with id {} deleted", contact_name, id)} }
+            ))
+          ))
+        },
+        Err(e) => {
+          eprintln!("Failed to delete contact: {}", e);
+          Err((StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to delete contact" }))
+          ))
+        }
       }
-    }))))
-  
-
+    },
+    Ok(None) => {
+      Err((
+        StatusCode::NOT_FOUND,
+        Json(serde_json::json!({ "error": format!("Contact with id {} not found", id) }))
+      ))
+    },
+    Err(e) => {
+      eprintln!("Failed to fetch contact: {}", e);
+      Err((StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({ "error": "Failed to fetch contact" }))
+      ))
+    }
+  }
 }

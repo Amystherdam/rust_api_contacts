@@ -29,27 +29,26 @@ pub async fn read_contacts(
       name_filter = name_filter.add(contacts::Column::Name.contains(name));
   }
 
-  let contacts = Contacts::find()
-      .filter(name_filter)
-      .all(&database)
-      .await
-      .map_err(|e| {
-          (
-              StatusCode::INTERNAL_SERVER_ERROR,
-              format!("Failed to fetch contacts: {}", e),
-          )
-      })
-      .unwrap()
-      .iter()
-      .map(|contact| ResponseContact {
-          id: contact.id,
-          name: contact.name.clone(),
-          email: contact.email.clone(),
-          phone: contact.phone.clone(),
-          created_at: contact.created_at.clone(),
-          updated_at: contact.updated_at.clone(),
-      })
-      .collect();
+  match Contacts::find()
+    .filter(name_filter)
+    .all(&database)
+    .await
+  {
+    Ok(contacts) => {
+      let contacts = contacts.iter().map(|contact| ResponseContact {
+        id: contact.id,
+        name: contact.name.clone(),
+        email: contact.email.clone(),
+        phone: contact.phone.clone(),
+        created_at: contact.created_at.clone(),
+        updated_at: contact.updated_at.clone(),
+      }).collect();
 
-  Ok(Json(contacts))
+      Ok(Json(contacts))
+    },
+    Err(e) => {
+      eprintln!("Failed to fetch contacts: {}", e);
+      Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+  }
 }

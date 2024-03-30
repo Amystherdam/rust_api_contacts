@@ -33,35 +33,41 @@ pub async fn create_contact(
   Extension(database): Extension<DatabaseConnection>, 
   Json(request_contact): Json<RequestContact>
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-  if let Err(errors) = request_contact.validate() {
-    return Err((
+  match request_contact.validate() {
+    Ok(()) => {
+      let new_contact = contacts::ActiveModel {
+        name: Set(request_contact.name),    
+        email: Set(request_contact.email),   
+        phone: Set(request_contact.phone),
+        created_at: Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time())))),
+        updated_at: Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time())))),
+        ..Default::default()
+      };
+
+      match new_contact.save(&database).await {
+        Ok(result) => {
+          Ok(Json(serde_json::json!({
+            "id": result.id.unwrap(),
+            "name": result.name.unwrap(),
+            "email": result.email.unwrap(),
+            "phone": result.phone.unwrap(),
+            "created_at": result.created_at.unwrap(),
+            "updated_at": result.updated_at.unwrap()
+          })))
+        }, 
+        Err(errors) => {
+          Err((
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": format!("Failed to create contact: {}", errors) })),
+          ))
+        }
+      }
+    }, 
+    Err(errors) => {
+      Err((
         StatusCode::BAD_REQUEST,
         Json(serde_json::json!({ "errors": errors })),
-    ));
+      ))
+    }
   }
-
-  let new_contact = contacts::ActiveModel {
-    name: Set(request_contact.name),    
-    email: Set(request_contact.email),   
-    phone: Set(request_contact.phone),
-    created_at: Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time())))),
-    updated_at: Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time())))),
-    ..Default::default()
-  };
-
-  let result = new_contact.save(&database).await.map_err(|e| {
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(serde_json::json!({ "error": format!("Failed to create contact: {}", e) })),
-    )
-  })?;
-
-  Ok(Json(serde_json::json!({
-    "id": result.id.unwrap(),
-    "name": result.name.unwrap(),
-    "email": result.email.unwrap(),
-    "phone": result.phone.unwrap(),
-    "created_at": result.created_at.unwrap(),
-    "updated_at": result.updated_at.unwrap()
-  })))
 }

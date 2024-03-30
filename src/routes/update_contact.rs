@@ -14,8 +14,6 @@ use sea_orm::{
 use chrono::{NaiveDateTime, Utc};
 use regex::Regex;
 
-
-
 #[derive(Deserialize, Validate)]
 pub struct RequestContact {
   #[validate(
@@ -51,66 +49,73 @@ pub async fn update_contact(
   Extension(database): Extension<DatabaseConnection>,
   Json(request_contact): Json<RequestContact>
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-  if let Err(errors) = request_contact.validate() {
-    return Err((
-      StatusCode::BAD_REQUEST,
-      Json(serde_json::json!({ "errors": errors }))
-    ));
-    
-  }
+  match request_contact.validate() {
+    Ok(()) => {
+      match Contacts::find_by_id(id)
+        .one(&database)
+        .await
+      {
+        Ok(Some(contact)) => {
+          let mut contact = contact.into_active_model();
 
-  let mut contact = 
-    if let Some(contact) = Contacts::find_by_id(id)
-      .one(&database)
-      .await
-      .map_err(|e| {
-        eprintln!("Failed to fetch contact: {}", e);
-        (
-          StatusCode::INTERNAL_SERVER_ERROR, 
-          Json(serde_json::json!({ "error": "Failed to fetch contact" }))
-        )})?
-    {
-      contact.into_active_model()
-    } else {
+          if let Some(name) = request_contact.name {
+            contact.name = Set(name);
+          }
+
+          if let Some(email) = request_contact.email {
+            contact.email = Set(email);
+          }
+
+          if let Some(phone) = request_contact.phone {
+            contact.phone = Set(phone);
+          }
+
+          contact.updated_at = Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time()))));
+
+          match Contacts::update(contact)
+            .filter(contacts::Column::Id.eq(id))
+            .exec(&database)
+            .await
+          {
+            Ok(result) => {
+              Ok(Json(serde_json::json!({
+                "id": id,
+                "name": result.name,
+                "email": result.email,
+                "phone": result.phone,
+                "created_at": result.created_at,
+                "updated_at": result.updated_at
+              })))
+            },
+            Err(e) => {
+              eprintln!("Failed to update contact: {}", e);
+              Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(serde_json::json!({ "error": "Failed to update contact" }))
+              ))
+            }
+          }
+        },
+        Ok(None) => {
+          Err((
+            StatusCode::NOT_FOUND,
+            Json(serde_json::json!({ "error": format!("Contact with id {} not found", id) }))
+          ))
+        },
+        Err(e) => {
+          eprintln!("Failed to fetch contact: {}", e);
+          Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": "Failed to fetch contact" }))
+          ))
+        }
+      }
+    },
+    Err(errors) => {
       return Err((
-        StatusCode::NOT_FOUND,
-        Json(serde_json::json!({ "error": format!("Contact with id {} not found", id) }))
+        StatusCode::BAD_REQUEST,
+        Json(serde_json::json!({ "errors": errors }))
       ));
-    };
-
-  if let Some(name) = request_contact.name {
-    contact.name = Set(name);
+    }
   }
-
-  if let Some(email) = request_contact.email {
-    contact.email = Set(email);
-  }
-
-  if let Some(phone) = request_contact.phone {
-    contact.phone = Set(phone);
-  }
-
-  contact.updated_at = Set(Some(DateTime::from(NaiveDateTime::new(Utc::now().naive_utc().date(), Utc::now().naive_utc().time()))));
-
-  let result = Contacts::update(contact)
-    .filter(contacts::Column::Id.eq(id))
-    .exec(&database)
-    .await
-    .map_err(|e| {
-      eprintln!("Failed to update contact: {}", e);
-      (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(serde_json::json!({ "error": "Failed to update contact" }))
-      )
-    })?;
-
-  Ok(Json(serde_json::json!({
-    "id": id,
-    "name": result.name,
-    "email": result.email,
-    "phone": result.phone,
-    "created_at": result.created_at,
-    "updated_at": result.updated_at
-  })))
-  
 }
